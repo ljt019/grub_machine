@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
-export const maxDuration = 60;
-
 // Create a rate limiter
 // This example allows 10 requests per IP address per minute
 const rateLimiter = new RateLimiterMemory({
-  points: 10, // Number of Requests
-  duration: 60 * 60, // Seconds
+  points: 15, // Number of Requests
+  duration: 60 * 5, // Seconds
 });
 
 export async function POST(request: Request) {
@@ -66,7 +64,7 @@ Respond with exactly 3 recipe options in this JSON format:
     "prepTime": "X minutes",
     "cookTime": "X minutes",
     "totalTime": "X minutes",
-    "servings": 2,
+    "servings": "#",
     "instructions": [
       "Step 1 instruction",
       "Step 2 instruction"
@@ -84,7 +82,7 @@ Respond with exactly 3 recipe options in this JSON format:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-3-5-haiku-20241022",
         max_tokens: 8096,
         system: systemPrompt,
         messages: [
@@ -99,7 +97,7 @@ Respond with exactly 3 recipe options in this JSON format:
       const errorText = await response.text();
       console.error('Anthropic API error:', errorText);
       return NextResponse.json(
-        { error: 'Error from Anthropic API' },
+        { error: 'Error' },
         { status: response.status }
       );
     }

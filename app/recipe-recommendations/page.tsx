@@ -2,19 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, ChefHat, Users, Flame, Zap, Wind, Timer, ArrowLeft } from "lucide-react";
+import { Clock, ChefHat, Users, Flame, Zap, Wind, Timer, ArrowLeft, Utensils } from "lucide-react";
 import { useMealContext } from "@/contexts/meal-context";
 import { ensureRecipesArray } from "@/utils/debug-helper";
+import { Separator } from "@/components/ui/separator";
 
 export default function RecipeRecommendations() {
   const router = useRouter();
@@ -66,115 +60,148 @@ export default function RecipeRecommendations() {
   );
 }
 
-// Update the RecipeResponse interface to match the actual API response
 interface RecipeResponse {
   mealTitle: string;
   cookingMethod: string;
   difficulty: string;
-  ingredients: Array<{ name: string; amount: string }>; // Changed from Record<string, string>
+  ingredients: Array<{ name: string; amount: string }>;
   prepTime: string;
   cookTime: string;
   totalTime: string;
   servings: number;
   instructions: Array<string>;
-  extraServingSuggestions: Array<string> | string; // Handle both array and string
+  extraServingSuggestions: Array<string> | string;
 }
 
 function RecipeCard({ recipe }: { recipe: RecipeResponse }) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
-      case "very easy":
-        return "bg-green-100 text-green-800";
       case "easy":
-        return "bg-emerald-100 text-emerald-800";
+        return "text-green-800 border-green-500";
       case "medium":
-        return "bg-amber-100 text-amber-800";
+        return "text-orange-800 border-orange-500";
       case "hard":
-        return "bg-orange-100 text-orange-800";
-      case "very hard":
-        return "bg-red-100 text-red-800";
+        return "text-red-800 border-red-500";
       default:
-        return "bg-slate-100 text-slate-800";
+        return "text-gray-800 border-gray-500";
+    }
+  };
+
+  const getDifficultyBorderColor = (difficulty: string) => {
+    switch (difficulty.toLowerCase()) {
+      case "very easy":
+      case "easy":
+        return "border-emerald-500/50";
+      case "medium":
+        return "border-orange-500/50";
+      case "hard":
+      case "very hard":
+        return "border-destructive/50";
+      default:
+        return "border-border";
     }
   };
 
   const getCookingMethodIcon = (method: string) => {
     switch (method.toLowerCase()) {
       case "stove":
-        return <Flame className="h-5 w-5" />;
+        return <Flame className="h-5 w-5 text-chart-5" />;
       case "microwave":
-        return <Zap className="h-5 w-5" />;
+        return <Zap className="h-5 w-5 text-chart-2" />;
       case "airfryer":
-        return <Wind className="h-5 w-5" />;
+        return <Wind className="h-5 w-5 text-chart-3" />;
+      case "oven":
+        return <ChefHat className="h-5 w-5 text-chart-4" />;
       default:
-        return <ChefHat className="h-5 w-5" />;
+        return <Utensils className="h-5 w-5 text-muted-foreground" />;
     }
   };
 
-  console.log(recipe);
-
   return (
     <Card
-      className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-shadow border-l-4"
-      style={{
-        borderLeftColor: recipe.difficulty.toLowerCase().includes("easy")
-          ? "#10b981"
-          : recipe.difficulty.toLowerCase().includes("medium")
-          ? "#f59e0b"
-          : "#ef4444",
-      }}
+      className={`h-full flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border-l-4  ${getDifficultyBorderColor(
+        recipe.difficulty
+      )}`}
     >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-xl">{recipe.mealTitle}</CardTitle>
-          <Badge variant="outline" className={getDifficultyColor(recipe.difficulty)}>
+      <CardHeader className="pb-3 bg-card/50">
+        <div className="flex justify-between items-start gap-4">
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-bold tracking-tight">{recipe.mealTitle}</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {getCookingMethodIcon(recipe.cookingMethod)}
+              <span className="font-medium">{recipe.cookingMethod}</span>
+            </div>
+          </div>
+          <Badge
+            variant="outline"
+            className={`${getDifficultyColor(
+              recipe.difficulty
+            )} px-4 py-1 text-sm font-medium text-center rounded-full bg-card items-center justify-center`}
+          >
             {recipe.difficulty}
           </Badge>
         </div>
-        <CardDescription className="flex items-center gap-2 mt-1">
-          {getCookingMethodIcon(recipe.cookingMethod)}
-          <span>{recipe.cookingMethod}</span>
-        </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-grow">
-        <div className="bg-muted/30 p-4 rounded-md mb-4">
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="flex flex-col items-center">
+      <CardContent className="flex-grow pt-4">
+        <div className="bg-muted rounded-lg p-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="flex flex-col items-center p-2 rounded-md hover:bg-secondary transition-colors">
               <Clock className="h-5 w-5 text-muted-foreground mb-1" />
-              <span className="text-xs font-medium">Prep Time</span>
-              <span className="text-sm">{recipe.prepTime}</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Prep
+              </span>
+              <span className="text-sm font-medium">{recipe.prepTime}</span>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center p-2 rounded-md hover:bg-secondary transition-colors">
               <Timer className="h-5 w-5 text-muted-foreground mb-1" />
-              <span className="text-xs font-medium">Cook Time</span>
-              <span className="text-sm">{recipe.cookTime}</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Cook
+              </span>
+              <span className="text-sm font-medium">{recipe.cookTime}</span>
             </div>
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center p-2 rounded-md hover:bg-secondary transition-colors">
               <Users className="h-5 w-5 text-muted-foreground mb-1" />
-              <span className="text-xs font-medium">Servings</span>
-              <span className="text-sm">{recipe.servings}</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Serves
+              </span>
+              <span className="text-sm font-medium">{recipe.servings}</span>
             </div>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
-            <h3 className="font-medium mb-2">Ingredients</h3>
-            <ul className="list-disc pl-5 space-y-1">
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2 pb-1 border-b border-border">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-1"></span>
+              Ingredients
+            </h3>
+            <ul className="grid gap-2 pl-1">
               {recipe.ingredients.map((item, idx) => (
-                <li key={idx} className="text-sm">
-                  <span className="font-medium">{item.name}</span>: {item.amount}
+                <li key={idx} className="flex items-start gap-2 text-sm">
+                  <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/30 mt-2"></span>
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-muted-foreground">: {item.amount}</span>
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
 
+          <Separator className="my-4" />
+
           <div>
-            <h3 className="font-medium mb-2">Instructions</h3>
-            <ol className="list-decimal pl-5 space-y-1">
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2 pb-1 border-b border-border">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-chart-4 mr-1"></span>
+              Instructions
+            </h3>
+            <ol className="space-y-3 pl-0">
               {recipe.instructions.map((step: string, idx: number) => (
-                <li key={idx} className="text-sm">
+                <li key={idx} className="relative pl-8 pb-1 text-sm">
+                  <span className="absolute left-0 top-0 flex items-center justify-center w-6 h-6 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
+                    {idx + 1}
+                  </span>
                   {step}
                 </li>
               ))}
@@ -182,10 +209,14 @@ function RecipeCard({ recipe }: { recipe: RecipeResponse }) {
           </div>
         </div>
       </CardContent>
-      <CardFooter>
-        <div>
-          <h3 className="font-medium mb-1">Serving Suggestion</h3>
-          <p className="text-sm text-muted-foreground">
+
+      <CardFooter className="bg-muted/50 border-t mt-4 p-4">
+        <div className="w-full">
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-chart-2 mr-1"></span>
+            Serving Suggestion
+          </h3>
+          <p className="text-sm text-muted-foreground italic">
             {Array.isArray(recipe.extraServingSuggestions)
               ? recipe.extraServingSuggestions.join(", ")
               : recipe.extraServingSuggestions}
