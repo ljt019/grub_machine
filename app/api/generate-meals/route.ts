@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
 // Create a rate limiter
 // This example allows 10 requests per IP address per minute
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       await rateLimiter.consume(ip);
     } catch (rateLimiterError) {
       // If the rate limit is exceeded, return a 429 status code (Too Many Requests)
-      const retryAfter = Math.floor(rateLimiterError.msBeforeNext / 1000) || 1;
+      const retryAfter = Math.floor((rateLimiterError as RateLimiterRes).msBeforeNext / 1000) || 1;
       return NextResponse.json(
         { error: 'Too many requests, please try again later.' },
         { 
