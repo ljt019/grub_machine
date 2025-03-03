@@ -1,0 +1,21 @@
+{
+  "mealType": "breakfast",
+  "ingredients": [
+    "pickles",
+    "tomatos",
+    "tomato sauce",
+    "chicken breasts",
+    "porkchops",
+    "potatos",
+    "corn",
+    "spinach",
+    "brussel sprouts",
+    "carrots",
+    "frozen chicken tenders",
+    "pasta"
+  ],
+  "dislikes": ["green vegetables"],
+  "cookingMethods": ["crockpot", "stove", "oven", "air-fryer", "microwave"],
+  "extraInstructions": ["I just got home from a late day at work, don't want anything crazy"],
+  "notInTheMoodFor": ["anything italian"]
+}
