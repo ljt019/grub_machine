@@ -1,25 +1,24 @@
 // app/api/search-image/route.js
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: { url: string; }) {
-  const { searchParams } = new URL(request.url);
-  const query = searchParams.get('query');
+export async function GET(request: NextRequest) {
+  const query = request.nextUrl.searchParams.get('query');
   
   if (!query) {
     return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
   }
 
   // For recipes, we keep the original query and add food
-  const searchQuery = `${query} food`;
+  const searchQuery = `${query}`;
   
   try {
     // Pixabay API according to documentation
     const response = await fetch(
-      `https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY}&q=${encodeURIComponent(searchQuery)}&image_type=photo&per_page=3&category=food&safesearch=true`
+      `https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY!}&q=${encodeURIComponent(searchQuery)}&image_type=photo&per_page=3&category=food&safesearch=true`
     );
     
-    const data = await response.json(); //test
+    const data = await response.json();
     
     if (data.hits && data.hits.length > 0) {
       // Get the first result
