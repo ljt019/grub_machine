@@ -69,7 +69,8 @@ Respond with exactly 3 recipe options in this JSON format:
       "Step 1 instruction",
       "Step 2 instruction"
     ],
-    "extraServingSuggestions": ["Suggestion 1", "Suggestion 2"]
+    "extraServingSuggestions": ["Suggestion 1", "Suggestion 2"],
+    "estimatedCaloriesPerServing": "#"
   },
   ...
 ]`;

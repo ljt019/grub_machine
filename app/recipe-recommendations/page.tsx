@@ -9,6 +9,7 @@ import { Clock, ChefHat, Users, Flame, Zap, Wind, Timer, ArrowLeft, Utensils } f
 import { useMealContext } from "@/contexts/meal-context";
 import { ensureRecipesArray } from "@/utils/debug-helper";
 import { Separator } from "@/components/ui/separator";
+import Image from "next/image";
 
 export default function RecipeRecommendations() {
   const router = useRouter();
@@ -71,9 +72,58 @@ interface RecipeResponse {
   servings: number;
   instructions: Array<string>;
   extraServingSuggestions: Array<string> | string;
+  estimatedCaloriesPerServing: number;
 }
 
+const imageCache = new Map();
+
 function RecipeCard({ recipe }: { recipe: RecipeResponse }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageAttribution, setImageAttribution] = useState<{ name: string; link: string } | null>(
+    null
+  );
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchRecipeImage = async () => {
+      try {
+        setIsImageLoading(true);
+
+        // Check if this recipe title is in our cache
+        if (imageCache.has(recipe.mealTitle)) {
+          const cachedData = imageCache.get(recipe.mealTitle);
+          setImageUrl(cachedData.imageUrl);
+          setImageAttribution(cachedData.attribution);
+          setIsImageLoading(false);
+          return;
+        }
+
+        // Not in cache, fetch from API
+        const response = await fetch(
+          `/api/search-image?query=${encodeURIComponent(recipe.mealTitle)}`
+        );
+        const data = await response.json();
+
+        if (data.imageUrl) {
+          // Store in cache
+          imageCache.set(recipe.mealTitle, {
+            imageUrl: data.imageUrl,
+            attribution: data.attribution,
+          });
+
+          setImageUrl(data.imageUrl);
+          setImageAttribution(data.attribution);
+        }
+      } catch (error) {
+        console.error("Error fetching recipe image:", error);
+      } finally {
+        setIsImageLoading(false);
+      }
+    };
+
+    fetchRecipeImage();
+  }, [recipe.mealTitle]);
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty.toLowerCase()) {
       case "easy":
@@ -119,10 +169,50 @@ function RecipeCard({ recipe }: { recipe: RecipeResponse }) {
 
   return (
     <Card
-      className={`h-full flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border-l-4  ${getDifficultyBorderColor(
+      className={`h-full flex flex-col overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border-l-4 ${getDifficultyBorderColor(
         recipe.difficulty
       )}`}
     >
+      {/* Image Section */}
+      <div className="relative w-full h-56 overflow-hidden">
+        {isImageLoading ? (
+          <div className="flex items-center justify-center h-full bg-muted">
+            <div className="w-8 h-8 border-2 border-primary/50 border-t-primary rounded-full animate-spin"></div>
+          </div>
+        ) : imageUrl ? (
+          <>
+            <div className="relative w-full h-full group">
+              <Image
+                src={imageUrl || "/placeholder.svg"}
+                alt={recipe.mealTitle}
+                width={640}
+                height={360}
+                className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
+                priority={false}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </div>
+            {imageAttribution && (
+              <div className="absolute bottom-0 right-0 bg-black/60 text-white text-xs px-2 py-1 rounded-tl-md">
+                Photo by{" "}
+                <a
+                  href={imageAttribution.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-primary transition-colors"
+                >
+                  {imageAttribution.name}
+                </a>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full bg-muted">
+            <Utensils className="h-8 w-8 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+
       <CardHeader className="pb-3 bg-card/50">
         <div className="flex justify-between items-start gap-4">
           <div className="space-y-1">
@@ -145,7 +235,7 @@ function RecipeCard({ recipe }: { recipe: RecipeResponse }) {
 
       <CardContent className="flex-grow pt-4">
         <div className="bg-muted rounded-lg p-4 mb-6">
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <div className="grid grid-cols-4 gap-4 text-center">
             <div className="flex flex-col items-center p-2 rounded-md hover:bg-secondary transition-colors">
               <Clock className="h-5 w-5 text-muted-foreground mb-1" />
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -166,6 +256,15 @@ function RecipeCard({ recipe }: { recipe: RecipeResponse }) {
                 Serves
               </span>
               <span className="text-sm font-medium">{recipe.servings}</span>
+            </div>
+            <div className="flex flex-col items-center p-2 rounded-md hover:bg-secondary transition-colors">
+              <Flame className="h-5 w-5 mb-1 text-orange-500" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Cal/Serv
+              </span>
+              <span className="text-sm font-medium">
+                {recipe.estimatedCaloriesPerServing || "N/A"}
+              </span>
             </div>
           </div>
         </div>
