@@ -19,7 +19,7 @@ export async function GET(request: { url: string | URL; }) {
       `https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY}&q=${encodeURIComponent(searchQuery)}&image_type=photo&per_page=3&category=food&safesearch=true`
     );
     
-    const data = await response.json();
+    const data = await response.json(); //test
     
     if (data.hits && data.hits.length > 0) {
       // Get the first result
