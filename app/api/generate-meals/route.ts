@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
 
-export const maxDuration = 1;
+export const maxDuration = 60;
 
 // Create a rate limiter
 // This example allows 10 requests per IP address per minute
