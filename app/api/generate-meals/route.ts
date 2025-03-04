@@ -1,138 +1,142 @@
-import { NextResponse } from 'next/server';
-import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
+import { NextResponse } from "next/server";
+import { RateLimiterMemory, RateLimiterRes } from "rate-limiter-flexible";
+import { ClaudeClient, RecipeRequest } from "@/services/claude";
+import { getFakeRecipeData } from "@/utils/get-fake-recipe-data";
 
-// Create a rate limiter
-// This example allows 10 requests per IP address per minute
+enum STATUS_CODES {
+  TOO_MANY_REQUESTS = 429,
+  SERVER_ERROR = 500,
+  OVERLOADED = 529,
+}
+
+enum ERROR_MESSAGES {
+  RATE_LIMIT = "Too many requests, please try again later.",
+  PARSE_ERROR = "Error parsing JSON response",
+  API_COMMUNICATION = "Error communicating with the Claude API",
+  INTERNAL_SERVER = "Internal server error",
+  OVERLOADED = "The Claude API is currently overloaded. Please try again later.",
+}
+
+enum ENV_TYPES {
+  DEV = "Dev",
+  PROD = "Prod",
+}
+
+interface ApiError extends Error {
+  name: string;
+  response?: {
+    status: number;
+    data: {
+      error?: {
+        message: string;
+      };
+    };
+  };
+}
+
 const rateLimiter = new RateLimiterMemory({
-  points: 15, // Number of Requests
+  points: 15,
   duration: 60 * 5, // Seconds
 });
 
 export async function POST(request: Request) {
   try {
     // Get the client's IP address
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown';
-    
-    // Try to consume a point
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : "unknown";
+
     try {
       await rateLimiter.consume(ip);
     } catch (rateLimiterError) {
-      // If the rate limit is exceeded, return a 429 status code (Too Many Requests)
       const retryAfter = Math.floor((rateLimiterError as RateLimiterRes).msBeforeNext / 1000) || 1;
+
       return NextResponse.json(
-        { error: 'Too many requests, please try again later.' },
-        { 
-          status: 429,
+        { error: ERROR_MESSAGES.RATE_LIMIT },
+        {
+          status: STATUS_CODES.TOO_MANY_REQUESTS,
           headers: {
-            'Retry-After': `${retryAfter}`, // Tells the client when they can try again
-          }
+            "Retry-After": `${retryAfter}`,
+          },
         }
       );
     }
 
-    // Continue with the existing code
-    const { promptData } = await request.json();
-   
-    // Create the system prompt
-    const systemPrompt = `You are a creative and helpful meal assistant.
-You receive user requests in this format:
-{
-  "mealType": "breakfast/lunch/dinner",
-  "ingredients": ["ingredient1", "ingredient2", ...],
-  "dislikes": ["disliked1", "disliked2", ...],
-  "cookingMethods": ["oven", "stovetop", ...],
-  "extraInstructions": "User's additional context",
-  "notInTheMoodFor": "Foods user doesn't want today"
-}
-Your job is to recommend recipes the user can make with ONLY the ingredients listed. Follow these guidelines:
-- Never suggest ingredients not in the "ingredients" list
-- Avoid all items in "dislikes" and "notInTheMoodFor"
-- Respect cooking methods specified
-- Tailor your suggestions to the meal type
-- Consider any special requests in "extraInstructions"
-Respond with exactly 3 recipe options in this JSON format:
-[
-  {
-    "mealTitle": "Name of the meal",
-    "cookingMethod": "Primary cooking method used",
-    "difficulty": "easy/medium/hard",
-    "ingredients": [
-      {"name": "ingredient1", "amount": "quantity needed"},
-      {"name": "ingredient2", "amount": "quantity needed"}
-    ],
-    "prepTime": "X minutes",
-    "cookTime": "X minutes",
-    "totalTime": "X minutes",
-    "servings": "#",
-    "instructions": [
-      "Step 1 instruction",
-      "Step 2 instruction"
-    ],
-    "extraServingSuggestions": ["Suggestion 1", "Suggestion 2"],
-    "estimatedCaloriesPerServing": "#"
-  },
-  ...
-]`;
-    // Make the API request to Anthropic
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': `${process.env.ANTHROPIC_KEY}`,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: "claude-3-5-haiku-20241022",
-        max_tokens: 8096,
-        system: systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: JSON.stringify(promptData)
-          }
-        ]
-      })
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', errorText);
-      return NextResponse.json(
-        { error: 'Error' },
-        { status: response.status }
-      );
+    const requestData = await request.json();
+    const recipeRequest = requestData.promptData as RecipeRequest;
+
+    const environment = process.env.DEPLOYMENT_ENVIRONMENT || ENV_TYPES.DEV;
+
+    if (environment === ENV_TYPES.DEV) {
+      console.log("Development environment detected. Returning mock data.");
+      return NextResponse.json(getFakeRecipeData());
     }
-    const data = await response.json();
-   
-    // Extract the text content from the response
-    let fullResponse = "";
-    if (data.content && Array.isArray(data.content)) {
-      for (const block of data.content) {
-        if (block.type === 'text') {
-          fullResponse += block.text;
-        }
-      }
-    }
-   
-    // Clean up the response - remove any markdown code block indicators
-    const jsonStr = fullResponse.replace(/```json|```/g, '').trim();
-   
-    // Parse and format the JSON
+
     try {
-      const responseJson = JSON.parse(jsonStr);
-      return NextResponse.json(responseJson);
-    } catch (parseError) {
-      console.error("Error parsing JSON response:", parseError);
+      if (!process.env.ANTHROPIC_KEY) {
+        console.error("Missing ANTHROPIC_KEY environment variable");
+        return NextResponse.json(
+          { error: "Server configuration error" },
+          { status: STATUS_CODES.SERVER_ERROR }
+        );
+      }
+
+      const claudeApiClient = new ClaudeClient(process.env.ANTHROPIC_KEY);
+      const response = await claudeApiClient.prompt_claude_for_recipes(
+        recipeRequest as RecipeRequest
+      );
+
+      try {
+        return NextResponse.json(response);
+      } catch (parseError) {
+        console.error("Error parsing JSON response:", parseError);
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.PARSE_ERROR },
+          { status: STATUS_CODES.SERVER_ERROR }
+        );
+      }
+    } catch (apiError: unknown) {
+      const isApiError = (err: unknown): err is ApiError => {
+        return typeof err === "object" && err !== null && "name" in err;
+      };
+
+      if (isApiError(apiError) && apiError.name === "OverloadedError") {
+        console.log("Detected overloaded API, returning appropriate status code");
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.OVERLOADED },
+          { status: STATUS_CODES.OVERLOADED }
+        );
+      }
+
+      console.error("API error:", isApiError(apiError) ? apiError : "Unknown error");
       return NextResponse.json(
-        { error: 'Error parsing JSON response', rawResponse: jsonStr },
-        { status: 500 }
+        { error: ERROR_MESSAGES.API_COMMUNICATION },
+        { status: STATUS_CODES.SERVER_ERROR }
       );
     }
-  } catch (error) {
-    console.error('Server error:', error);
+  } catch (error: unknown) {
+    console.error("Server error:", error);
+
+    const isApiError = (err: unknown): err is ApiError => {
+      return (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as ApiError).response?.data === "object"
+      );
+    };
+
+    if (isApiError(error) && error.response && error.response.data) {
+      const errorData = error.response.data;
+
+      return NextResponse.json(
+        { error: errorData.error?.message || ERROR_MESSAGES.API_COMMUNICATION },
+        { status: error.response.status || STATUS_CODES.SERVER_ERROR }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: ERROR_MESSAGES.INTERNAL_SERVER },
+      { status: STATUS_CODES.SERVER_ERROR }
     );
   }
 }

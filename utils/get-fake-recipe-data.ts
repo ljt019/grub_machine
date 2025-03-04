@@ -1,0 +1,82 @@
+import { RecipePromptResponse } from "@/services/claude";
+
+export function getFakeRecipeData(): RecipePromptResponse {
+  return [
+    {
+      mealTitle: "Quick Veggie Omelette FD",
+      cookingMethod: "stovetop",
+      difficulty: "easy",
+      ingredients: [
+        { name: "eggs", amount: "3 large" },
+        { name: "bell pepper", amount: "1/4 cup, diced" },
+        { name: "onion", amount: "2 tbsp, chopped" },
+        { name: "spinach", amount: "1/2 cup, fresh" },
+        { name: "cheddar cheese", amount: "1/4 cup, shredded" },
+      ],
+      prepTime: "5 minutes",
+      cookTime: "7 minutes",
+      totalTime: "12 minutes",
+      servings: "1",
+      instructions: [
+        "Whisk eggs in a bowl until well beaten",
+        "Heat a non-stick pan over medium heat",
+        "Add chopped vegetables and sauté for 1-2 minutes",
+        "Pour in eggs and cook for 2-3 minutes until mostly set",
+        "Sprinkle cheese on top, fold omelette in half",
+        "Cook for another minute until cheese melts",
+      ],
+      extraServingSuggestions: ["Top with fresh herbs if available", "Serve with toast"],
+      estimatedCaloriesPerServing: "320",
+    },
+    {
+      mealTitle: "Simple Pasta Primavera FD",
+      cookingMethod: "stovetop",
+      difficulty: "medium",
+      ingredients: [
+        { name: "pasta", amount: "2 cups, cooked" },
+        { name: "olive oil", amount: "1 tbsp" },
+        { name: "garlic", amount: "2 cloves, minced" },
+        { name: "bell pepper", amount: "1/2 cup, sliced" },
+        { name: "zucchini", amount: "1 medium, sliced" },
+      ],
+      prepTime: "10 minutes",
+      cookTime: "15 minutes",
+      totalTime: "25 minutes",
+      servings: "2",
+      instructions: [
+        "Cook pasta according to package directions",
+        "In a large pan, heat olive oil over medium heat",
+        "Add garlic and sauté for 30 seconds",
+        "Add bell pepper and zucchini, cook for 5-7 minutes until tender",
+        "Toss with cooked pasta and season with salt and pepper",
+      ],
+      extraServingSuggestions: ["Add a sprinkle of parmesan cheese", "Garnish with fresh basil"],
+      estimatedCaloriesPerServing: "380",
+    },
+    {
+      mealTitle: "Bean and Vegetable Soup FD",
+      cookingMethod: "stovetop",
+      difficulty: "easy",
+      ingredients: [
+        { name: "canned beans", amount: "1 can (15oz), drained" },
+        { name: "vegetable broth", amount: "3 cups" },
+        { name: "onion", amount: "1 small, diced" },
+        { name: "carrots", amount: "2 medium, chopped" },
+        { name: "celery", amount: "2 stalks, chopped" },
+      ],
+      prepTime: "10 minutes",
+      cookTime: "25 minutes",
+      totalTime: "35 minutes",
+      servings: "4",
+      instructions: [
+        "In a large pot, sauté onion in a bit of oil until translucent",
+        "Add carrots and celery, cook for 3-4 minutes",
+        "Pour in vegetable broth and bring to a simmer",
+        "Add beans and simmer for 15-20 minutes",
+        "Season with salt and pepper to taste",
+      ],
+      extraServingSuggestions: ["Top with a dollop of sour cream", "Serve with crusty bread"],
+      estimatedCaloriesPerServing: "220",
+    },
+  ];
+}

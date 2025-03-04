@@ -1,67 +1,32 @@
-// app/api/search-image/route.js
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
+import { PixabayApiClient, ERROR_MESSAGES } from "@/services/pixabay";
 
 export async function GET(request: NextRequest) {
-  const query = request.nextUrl.searchParams.get('query');
-  
+  const query = request.nextUrl.searchParams.get("query");
+
   if (!query) {
-    return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 });
+    return NextResponse.json({ error: ERROR_MESSAGES.EMPTY_QUERY }, { status: 400 });
   }
 
-  // For recipes, we keep the original query and add food
-  const searchQuery = `${query}`;
-  
   try {
-    // Pixabay API according to documentation
-    const response = await fetch(
-      `https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY!}&q=${encodeURIComponent(searchQuery)}&image_type=photo&per_page=3&category=food&safesearch=true`
-    );
-    
-    const data = await response.json();
-    
-    if (data.hits && data.hits.length > 0) {
-      // Get the first result
-      const image = data.hits[0];
-      return NextResponse.json({ 
-        imageUrl: image.webformatURL,
-        largeImageUrl: image.largeImageURL, // Also provide the larger version
-        attribution: {
-          name: image.user,
-          link: `https://pixabay.com/users/${image.user}-${image.user_id}/`
-        }
-      });
-    } else {
-      // No results from specific query, try a more generic food search
-      // Extract main food item (usually the last substantive word)
-      const mainFood = query.split(' ').filter(word => word.length > 3).pop() || query.split(' ').pop();
-      
-      const fallbackResponse = await fetch(
-        `https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY!}&q=${encodeURIComponent(mainFood as string)}&image_type=photo&per_page=3&safesearch=true`
-      );
-      
-      const fallbackData = await fallbackResponse.json();
-      
-      if (fallbackData.hits && fallbackData.hits.length > 0) {
-        const image = fallbackData.hits[0];
-        return NextResponse.json({ 
-          imageUrl: image.webformatURL,
-          largeImageUrl: image.largeImageURL,
-          attribution: {
-            name: image.user,
-            link: `https://pixabay.com/users/${image.user}-${image.user_id}/`
-          }
-        });
-      }
-      
-      // Fallback to a placeholder if no image found
-      return NextResponse.json({ 
-        imageUrl: `/api/placeholder/600/400?text=${encodeURIComponent(query)}`,
-        attribution: null
-      });
+    if (!process.env.PIXABAY_API_KEY) {
+      console.error("Missing PIXABAY_API_KEY environment variable");
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
     }
+
+    const pixabayClient = new PixabayApiClient(process.env.PIXABAY_API_KEY);
+    const imageResult = await pixabayClient.searchImages({ query });
+
+    return NextResponse.json(imageResult);
   } catch (error) {
-    console.error('Error fetching image:', error);
-    return NextResponse.json({ error: 'Failed to fetch image' }, { status: 500 });
+    console.error("Error fetching image:", error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Failed to fetch image",
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

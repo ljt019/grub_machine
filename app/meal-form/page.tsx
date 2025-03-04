@@ -59,8 +59,26 @@ export default function MealForm() {
         }),
       });
 
+      // Handle different error cases
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
+        // Get the detailed error response if available
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // If we can't parse JSON, just use the status text
+          errorData = { error: response.statusText };
+        }
+
+        // Check if it's the overloaded API error (529 status)
+        if (
+          response.status === 529 ||
+          (errorData?.error && errorData.error.includes("overloaded"))
+        ) {
+          throw new Error("API_OVERLOADED");
+        } else {
+          throw new Error(`API request failed: ${errorData?.error || response.statusText}`);
+        }
       }
 
       const data = await response.json();
@@ -84,7 +102,15 @@ export default function MealForm() {
       }
     } catch (error) {
       console.error("Error calling Anthropic API:", error);
-      alert("There was an error generating meal recommendations. Please try again.");
+
+      // Specific error message for API overload
+      if (error.message === "API_OVERLOADED") {
+        alert(
+          "The Claude AI service is currently experiencing high traffic. Please wait a moment and try again later."
+        );
+      } else {
+        alert("There was an error generating meal recommendations. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
